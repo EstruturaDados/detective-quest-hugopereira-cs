@@ -38,6 +38,125 @@ typedef struct {
     NoHash* tabela[TAMANHO_HASH];
 } TabelaHash;
 
+// ======== PROTÓTIPOS DAS FUNÇÕES ========
+// Funções da Tabela Hash
+int funcaoHash(const char* chave);
+TabelaHash* criarTabelaHash();
+void inserirHash(TabelaHash* tabela, const char* pista, const char* suspeito);
+char* buscarSupeitoHash(TabelaHash* tabela, const char* pista);
+void exibirAssociacoes(TabelaHash* tabela, NoPista* bstPistas);
+char* analisarSuspeitos(TabelaHash* tabela, NoPista* bstPistas);
+void liberarTabelaHash(TabelaHash* tabela);
+
+// Funções da BST
+NoPista* criarNoPista(const char* pista);
+NoPista* inserirPista(NoPista* raiz, const char* pista);
+int buscarPista(NoPista* raiz, const char* pista);
+void exibirPistaEmOrdem(NoPista* raiz);
+int contarPistas(NoPista* raiz);
+void liberarMemoriaBST(NoPista* raiz);
+
+// Funções das Salas
+Sala* criarSala(const char* nome, const char* pista);
+void explorarSalas(Sala *salaAtual, NoPista** bstPistas, TabelaHash* tabelaSuspeitos);
+void liberarArvore(Sala *raiz);
+
+int main() {
+    setlocale(LC_ALL, "Portuguese");
+
+    // Construindo a árvore BST
+    NoPista* bstPistas = NULL;
+
+    // Criando a tabela hash para suspeitos
+    TabelaHash* tabelaSuspeitos = criarTabelaHash();
+
+    // Define quais pistas pertencem a cada suspeito
+    inserirHash(tabelaSuspeitos, "Livro aberto na pagina 214", "Professor Marcus");
+    inserirHash(tabelaSuspeitos, "Foto rasgada no chão", "Condessa Helena");
+    inserirHash(tabelaSuspeitos, "Carta antiga escondida", "Professor Marcus");
+    inserirHash(tabelaSuspeitos, "Colher de jardinagem caida", "Jardineiro Thomas");
+    inserirHash(tabelaSuspeitos, "Faca enferrujada na mesa", "Chef Antoine");
+
+    // Construíndo a ávore binária da mansão
+    Sala *hall = criarSala("Hall de Entrada", "");
+
+    // Nível 1
+    hall->esquerda = criarSala("Biblioteca", "Livro aberto na pagina 214");
+    hall->direita = criarSala("Sala de Estar", "Foto rasgada no chão");
+
+    // Nível 2
+    hall->esquerda->esquerda = criarSala("Sala de Leitura", "Carta antiga escondida");
+    hall->esquerda->direita = criarSala("Jardim de Inverno", "Colher de jardinagem caida");
+    hall->direita->esquerda = criarSala("Cozinha", "Faca enferrujada na mesa");
+    hall->direita->direita = criarSala("Banheiro", "");
+
+    // Nível 3
+    hall->esquerda->esquerda->esquerda = criarSala("Sala de Música", "Piano desafinado tocando sozinho");
+    hall->esquerda->esquerda->direita = criarSala("Estufa", "Saco de adubo ragado");
+    hall->direita->esquerda->esquerda = criarSala("Varanda", "Cadeira de balanco tombada");
+    hall->direita->esquerda->direita = criarSala("Quarto", "Diario com paginas arrancadas");
+
+    printf("\nHISTÒRIA:\n");
+    printf("Um crime ocorreu nesta mansão!\n");
+    printf("\nExplore os cômodos, colete pistas e descubra quem é o culpado!\n");
+    printf("\nEscolha se quer ir para a esquerda ou para a direita.\n");
+    printf("\nPressione enter para continuar...");
+    getchar();
+
+    // Inicia a exploração
+    explorarSalas(hall, &bstPistas, tabelaSuspeitos);
+
+    // Resumo da investigação
+    printf("\n------- Resumo da Investigação -------\n");
+    printf("Pistas coletadas: %d\n", contarPistas(bstPistas));
+    if (bstPistas != NULL) {
+        printf("\nSuas pistas (em ordem alfabética):\n");
+        exibirPistaEmOrdem(bstPistas);
+    }
+    printf("\n-------------------------------------------\n\n");
+
+    // Exibe associações
+    exibirAssociacoes(tabelaSuspeitos, bstPistas);
+
+    char* culpadoReal = analisarSuspeitos(tabelaSuspeitos, bstPistas);
+
+    // Pede ao jogador para adivinhar o culpado
+    if (culpadoReal != NULL && contarPistas(bstPistas) > 0) {
+        char palpite [MAX_SUSPEITO];
+
+        printf("\n======== JULGAMENTO =======\n");
+        printf("\nBaseado nas pistas coletadas, quem você acha que é o culpado?\n");
+        printf("\nDigite o nome do supeito: ");
+        fgets(palpite, MAX_SUSPEITO, stdin);
+        // Remove o \n do final
+        palpite[strcspn(palpite, "\n")] = '\0';
+        
+        printf("\n-------------------------------------------\n");
+        
+        // Compara com o culpado real (ignora maiúsculas/minúsculas)
+        if (strcasecmp(palpite, culpadoReal) == 0) {
+            printf("\nPARABÉNS! VOCÊ ACERTOU!\n\n");
+            printf("O culpado era mesmo %s!\n", culpadoReal);
+        } else {
+            printf("\nQue pena! Você errou!\n\n");
+            printf("Seu palpite: %s\n", palpite);
+            printf("O verdadeiro culpado: %s\n\n", culpadoReal);
+            printf("Analise as pistas com mais atenção da próxima vez!\n");
+        }
+        printf("\n-------------------------------------------\n\n");
+    }
+
+    printf("\nObrigado por auxiliar nesta investigação!\n");
+
+    // Libera a memória alocada
+    liberarArvore(hall);
+    liberarMemoriaBST(bstPistas);
+
+    printf("\nAté a próxima investigação!\n\n");
+
+    return 0;
+}
+
 // ========= FUNÇOES DA TABELA HASH =========
 // Soma ASCII % tamanho
 int funcaoHash( const char* chave) {
@@ -102,15 +221,18 @@ char* buscarSupeitoHash(TabelaHash* tabela, const char* pista) {
 }
 
 // Exibe todas as associações pista -> suspeita
-void exibirAssociacoes(TabelaHash* tabela) {
-    printf("\n======= ASSOCIAÇÕES PISTA -> SUSPEITO =======\\n");
+void exibirAssociacoes(TabelaHash* tabela, NoPista* bstPistas) {
+    printf("\n======= ASSOCIAÇÕES PISTA -> SUSPEITO =======\n");
     int encontrouAlguma = 0;
 
     for (int i = 0; i < TAMANHO_HASH; i++) {
         NoHash* atual = tabela->tabela[i];
         while (atual != NULL) {
-            printf("    \"%s\" -> %s\n", atual->pista, atual->suspeito);
-            encontrouAlguma = 1;
+            // Verifica se a pista foi coletada (está na BST)
+            if (buscarPista(bstPistas, atual->pista)) {
+                printf("    \"%s\" -> %s\n", atual->pista, atual->suspeito);
+                encontrouAlguma = 1;
+            }
             atual = atual->proximo;
         }
     }
@@ -121,8 +243,8 @@ void exibirAssociacoes(TabelaHash* tabela) {
     printf("\n---------------------------------------------\n");
 }
 
-// Conta quantas vezes cada suspeito aparece
-char* analisarSuspeitos(TabelaHash* tabela) {
+// Conta quantas vezes cada suspeito aparece (apenas pistas coletadas)
+char* analisarSuspeitos(TabelaHash* tabela, NoPista* bstPistas) {
     // Array para contar suspeitos (máximo de 5 suspeitos diferentes)
     static char suspeitos[5][MAX_SUSPEITO];
     int contagens[5] = {0};
@@ -132,20 +254,22 @@ char* analisarSuspeitos(TabelaHash* tabela) {
     for (int i = 0; i < TAMANHO_HASH; i++) {
         NoHash* atual = tabela->tabela[i];
         while (atual != NULL) {
-            // Verifica se o supeito já está na lista
-            int encontrado = 0;
-            for (int j = 0; j < numSuspeitos; j++) {
-                if (strcmp(suspeitos[j], atual->suspeito) == 0) {
-                    contagens[j]++;
-                    encontrado = 1;
-                    break;
+            // Verifica se a pista foi coletada
+            if (buscarPista(bstPistas, atual->pista)) {
+                int encontrado = 0;
+                for (int j = 0; j < numSuspeitos; j++) {
+                    if (strcmp(suspeitos[j], atual->suspeito) == 0) {
+                        contagens[j]++;
+                        encontrado = 1;
+                        break;
+                    }
                 }
-            }
-            // Adiciona novo suspeito, caso não tenha encontrado
-            if (!encontrado && numSuspeitos < 5) {
-                strcpy(suspeitos[numSuspeitos], atual->suspeito);
-                contagens[numSuspeitos] = 1;
-                numSuspeitos++;
+                // Adiciona novo suspeito, caso não tenha encontrado
+                if (!encontrado && numSuspeitos < 5) {
+                    strcpy(suspeitos[numSuspeitos], atual->suspeito);
+                    contagens[numSuspeitos] = 1;
+                    numSuspeitos++;
+                }
             }
             atual = atual->proximo;
         }
@@ -155,6 +279,7 @@ char* analisarSuspeitos(TabelaHash* tabela) {
     printf("\n======= Análise de Suspeitos =======\n");
     if (numSuspeitos == 0) {
         printf("Nenhum suspeito identificado ainda.\n");
+        return NULL;
     }
     printf("Número de pistas por suspeito:\n\n");
 
@@ -162,7 +287,7 @@ char* analisarSuspeitos(TabelaHash* tabela) {
     int indiceMaiorSuspeito = 0;
 
     for (int i = 0; i < numSuspeitos; i++) {
-        printf("    %s: %d pista(s)\n", suspeitos[i], contagens[i]);
+        printf("\n    %s: %d pista(s)\n", suspeitos[i], contagens[i]);
         if (contagens[i] > maxContagem) {
             maxContagem = contagens[i];
             indiceMaiorSuspeito = i;
@@ -363,6 +488,11 @@ void explorarSalas(Sala *salaAtual, NoPista** bstPistas, TabelaHash* tabelaSuspe
                 printf("\nPressione enter para continuar...");
                 getchar();
                 break;
+            case 'a':
+                exibirAssociacoes(tabelaSuspeitos, *bstPistas);
+                printf("\nPressione enter para continuar...");
+                getchar();
+                break;
             case 's':
                 printf("Saindo do jogo... Até logo!\n");
                 return;
@@ -382,102 +512,4 @@ void liberarArvore(Sala *raiz) {
         liberarArvore(raiz->direita);
         free(raiz);
     }
-}
-
-
-
-int main() {
-    setlocale(LC_ALL, "Portuguese");
-
-    // Construindo a árvore BST
-    NoPista* bstPistas = NULL;
-
-    // Criando a tabela hash para suspeitos
-    TabelaHash* tabelaSuspeitos = criarTabelaHash();
-
-    // Define quais pistas pertencem a cada suspeito
-    inserirHash(tabelaSuspeitos, "Livro aberto na pagina 214", "Professor Marcus");
-    inserirHash(tabelaSuspeitos, "Foto rasgada no chão", "Condessa Helena");
-    inserirHash(tabelaSuspeitos, "Carta antiga escondida", "Professor Marcus");
-    inserirHash(tabelaSuspeitos, "Colher de jardinagem caida", "Jardineiro Thomas");
-    inserirHash(tabelaSuspeitos, "Faca enferrujada na mesa", "Chef Antoine");
-
-    // Construíndo a ávore binária da mansão
-    Sala *hall = criarSala("Hall de Entrada", "");
-
-    // Nível 1
-    hall->esquerda = criarSala("Biblioteca", "Livro aberto na pagina 214");
-    hall->direita = criarSala("Sala de Estar", "Foto rasgada no chão");
-
-    // Nível 2
-    hall->esquerda->esquerda = criarSala("Sala de Leitura", "Carta antiga escondida");
-    hall->esquerda->direita = criarSala("Jardim de Inverno", "Colher de jardinagem caida");
-    hall->direita->esquerda = criarSala("Cozinha", "Faca enferrujada na mesa");
-    hall->direita->direita = criarSala("Banheiro", "");
-
-    // Nível 3
-    hall->esquerda->esquerda->esquerda = criarSala("Sala de Música", "Piano desafinado tocando sozinho");
-    hall->esquerda->esquerda->direita = criarSala("Estufa", "Saco de adubo ragado");
-    hall->direita->esquerda->esquerda = criarSala("Varanda", "Cadeira de balanco tombada");
-    hall->direita->esquerda->direita = criarSala("Quarto", "Diario com paginas arrancadas");
-
-    printf("\nHISTÒRIA:\n");
-    printf("Um crime ocorreu nesta mansão!");
-    printf("\nExplore os cômodos, colete pistas e descubra quem é o culpado!\n");
-    printf("\nEscolha se quer ir para a esquerda ou para a direita.\n");
-    printf("\nPressione enter para continuar...");
-    getchar();
-
-    // Inicia a exploração
-    explorarSalas(hall, &bstPistas, tabelaSuspeitos);
-
-    // Resumo da investigação
-    printf("\n------- Resumo da Investigação -------");
-    printf("Pistas coletadas: %d\n", contarPistas(bstPistas));
-    if (bstPistas != NULL) {
-        printf("\nSuas pistas (em ordem alfabética):\n");
-        exibirPistaEmOrdem(bstPistas);
-    }
-    printf("\n-------------------------------------------\n\n");
-
-    // Exibe associações
-    exibirAssociacoes(tabelaSuspeitos);
-
-    char* culpadoReal = analisarSuspeitos(tabelaSuspeitos);
-
-    // Pede ao jogador para adivinhar o culpado
-    if (culpadoReal != NULL && contarPistas(bstPistas) > 0) {
-        char palpite [MAX_SUSPEITO];
-
-        printf("\n======== JULGAMENTO =======\n");
-        printf("\nBaseado nas pistas coletadas, quem você acha que é o culpado?\n");
-        printf("\nDigite o nome do supeito: ");
-        fgets(palpite, MAX_SUSPEITO, stdin);
-        // Remove o \n do final
-        palpite[strcspn(palpite, "\n")] = '\0';
-        
-        printf("\n-------------------------------------------\n");
-        
-        // Compara com o culpado real (ignora maiúsculas/minúsculas)
-        if (strcasecmp(palpite, culpadoReal) == 0) {
-            printf("\nPARABÉNS! VOCÊ ACERTOU!\n\n");
-            printf("O culpado era mesmo %s!\n", culpadoReal);
-        } else {
-            printf("\nQue pena! Você errou!\n\n");
-            printf("Seu palpite: %s\n", palpite);
-            printf("O verdadeiro culpado: %s\n\n", culpadoReal);
-            printf("Analise as pistas com mais atenção da próxima vez!\n");
-        }
-        printf("\n-------------------------------------------\n\n");
-    }
-
-    printf("\nObrigado por auxiliar nesta investigação!\n");
-
-    // Libera a memória alocada
-    liberarArvore(hall);
-    liberarMemoriaBST(bstPistas);
-
-    printf("\nAté a próxima investigação!\n\n");
-
-    return 0;
 }
